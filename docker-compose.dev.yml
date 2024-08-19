@@ -1,0 +1,48 @@
+services:
+  frontend:
+    image: frontend
+    build:
+      context: ./phonebookFrontend
+      dockerfile: dev.Dockerfile
+    volumes:
+      - ./phonebookFrontend:/usr/src/app
+    container_name: frontend
+    depends_on:
+      - mongo
+    ports:
+      - 5173:5173
+  
+  mongo:
+    image: mongo
+    ports:
+      - 3456:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: the_database
+    volumes:
+      - ./phonebookBackend/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./phonebookBackend/mongo_data:/data/db
+
+  backend:
+    build:
+      context: ./phonebookBackend  # Path relative to todo-app
+      dockerfile: dev.Dockerfile
+    ports:
+      - 3000:3000
+    volumes:
+      - ./phonebookBackend:/usr/src/app  # Adjusted path
+    depends_on:
+      - mongo
+    command: ["npm", "run", "dev"]
+
+  nginx:
+    image: nginx:1.20.1
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8080:80
+    container_name: reverse-proxy
+    depends_on:
+      - frontend
+      - backend # wait for the containers to start
